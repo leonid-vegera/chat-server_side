@@ -6,7 +6,6 @@ import path from 'path';
 import {EventEmitter} from 'events';
 
 const PORT = process.env.PORT || 5050;
-
 const app = express();
 
 app.use(cors({
@@ -17,6 +16,16 @@ app.use(express.json());
 
 const messages = [];
 const emitter = new EventEmitter();
+
+app.get('/messages', (req, res, next) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Cache-Control', 'no-store');
+
+  emitter.on('message', (message) => {
+    res.write(`data: ${JSON.stringify(message)}\n\n`);
+  })
+})
 
 app.post('/messages', (req, res, next) => {
   const {text} = req.body;
@@ -29,12 +38,6 @@ app.post('/messages', (req, res, next) => {
   emitter.emit('message', message);
 
   res.status(201).json(message);
-})
-
-app.get('/messages', (req, res, next) => {
-  emitter.once('message', (message) => {
-    res.json(messages);
-  })
 })
 
 app.listen(PORT, () => {
